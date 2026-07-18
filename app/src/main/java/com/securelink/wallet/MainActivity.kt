@@ -135,7 +135,7 @@ fun SecureLinkApp(viewModel: AppViewModel, onUnlockVault: () -> Unit) {
             Scaffold(
                 containerColor = colors.background,
                 bottomBar = {
-                    NavigationBar(containerColor = Color.White) {
+                    NavigationBar(containerColor = colors.surface) {
                         Tab.entries.forEach {
                             NavigationBarItem(
                                 selected = tab == it,
@@ -199,14 +199,14 @@ private fun Header(state: AppState) {
     ) {
         Box(
             modifier = Modifier
-                .background(Brush.horizontalGradient(listOf(Color(0xFF111827), Color(0xFF0F766E))))
+                .background(Brush.horizontalGradient(listOf(Color(0xFF3B176D), Color(0xFF7C3AED))))
                 .padding(18.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("SecureLink Wallet", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold)
                 Text(
                     "Private chat, calling, documents, and credentials for ${selected?.name ?: "your trusted peer"}.",
-                    color = Color(0xFFE5E7EB),
+                    color = Color(0xFFF3E8FF),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -304,21 +304,21 @@ private fun ColumnScope.ChatsScreen(
 
 @Composable
 private fun ContactChip(contact: Contact, selected: Boolean, onClick: () -> Unit) {
-    val border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, Color(0xFFE5E7EB))
+    val border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, Color(0xFFE9D5FF))
     Card(
         modifier = Modifier
             .width(178.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         border = border,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Avatar(contact.name)
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(contact.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(contact.trustLevel, style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B7280), maxLines = 1)
+                Text(contact.trustLevel, style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B6477), maxLines = 1)
             }
         }
     }
@@ -330,10 +330,10 @@ private fun Avatar(name: String) {
         modifier = Modifier
             .size(42.dp)
             .clip(CircleShape)
-            .background(Color(0xFFDCFCE7)),
+            .background(Color(0xFFEDE9FE)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(name.take(1).uppercase(), color = Color(0xFF166534), fontWeight = FontWeight.Bold)
+        Text(name.take(1).uppercase(), color = Color(0xFF5B21B6), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -346,14 +346,14 @@ private fun MessageBubble(message: ChatMessage) {
         Card(
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (message.sentByMe) MaterialTheme.colorScheme.primary else Color.White,
+                containerColor = if (message.sentByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
             ),
             modifier = Modifier.fillMaxWidth(0.82f),
         ) {
             Text(
                 text = if (message.sentByMe) message.text else "Peer: ${message.text}",
                 modifier = Modifier.padding(12.dp),
-                color = if (message.sentByMe) Color.White else Color(0xFF111827),
+                color = if (message.sentByMe) Color.White else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -378,12 +378,12 @@ private fun CallsScreen(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color(0xFFE9D5FF)),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CallPreview(state, localTrack, remoteTrack, eglContext)
-            Text(state.p2pStatus, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF374151))
+            Text(state.p2pStatus, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4C3D5E))
             if (!state.mediaPermissionGranted) {
                 OutlinedButton(onClick = onRequestPermissions, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
                     Text("Allow camera and microphone")
@@ -446,7 +446,7 @@ private fun CallPreview(
             .fillMaxWidth()
             .height(220.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF020617), Color(0xFF164E63)))),
+            .background(Brush.linearGradient(listOf(Color(0xFF1E1038), Color(0xFF6D28D9)))),
     ) {
         if (state.mediaPermissionGranted && localTrack != null) {
             WebRtcVideoRenderer(remoteTrack ?: localTrack, eglContext, mirror = remoteTrack == null)
@@ -478,7 +478,7 @@ private fun CallPreview(
             )
             Text(
                 text = if (state.mediaPermissionGranted) "Camera and microphone are available" else "Grant media permissions to place calls",
-                color = Color(0xFFE0F2FE),
+                color = Color(0xFFF3E8FF),
             )
         }
     }
@@ -539,7 +539,7 @@ private fun ColumnScope.PasswordsScreen(
         Button(onClick = onUnlock, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
             Text("Unlock credential vault")
         }
-        vaultMessage?.let { Text(it, color = Color(0xFFB45309), style = MaterialTheme.typography.bodyMedium) }
+        vaultMessage?.let { Text(it, color = Color(0xFF7E22CE), style = MaterialTheme.typography.bodyMedium) }
     }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
         items(credentials) { item ->
@@ -553,13 +553,13 @@ private fun ListCard(title: String, subtitle: String, body: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color(0xFFE9D5FF)),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(subtitle, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-            Text(body, color = Color(0xFF4B5563), style = MaterialTheme.typography.bodyMedium)
+            Text(body, color = Color(0xFF4C3D5E), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -568,18 +568,25 @@ private fun ListCard(title: String, subtitle: String, body: String) {
 private fun SectionTitle(title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(subtitle, color = Color(0xFF6B7280), style = MaterialTheme.typography.bodyMedium)
+        Text(subtitle, color = Color(0xFF6B6477), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
 @Composable
 private fun secureLinkColors() = MaterialTheme.colorScheme.copy(
-    primary = Color(0xFF0F766E),
+    primary = Color(0xFF6D28D9),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFCCFBF1),
-    secondary = Color(0xFF4338CA),
-    background = Color(0xFFF8FAFC),
-    surface = Color.White,
+    primaryContainer = Color(0xFFEDE9FE),
+    onPrimaryContainer = Color(0xFF2E1065),
+    secondary = Color(0xFF9333EA),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF3E8FF),
+    background = Color(0xFFFCFAFF),
+    onBackground = Color(0xFF241B2E),
+    surface = Color(0xFFFFFBFF),
+    onSurface = Color(0xFF241B2E),
+    surfaceVariant = Color(0xFFF3E8FF),
+    outline = Color(0xFF9586A6),
 )
 
 private enum class Tab(val label: String, val symbol: String) {
