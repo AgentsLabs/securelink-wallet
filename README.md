@@ -36,6 +36,8 @@ JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradle
 
 Target category: Apps for your life.
 
+The complete ready-to-paste submission is in [HACKATHON_SUBMISSION.md](HACKATHON_SUBMISSION.md).
+
 Demo script:
 
 1. Show trusted contacts, select a peer, and send a local chat demo message.
