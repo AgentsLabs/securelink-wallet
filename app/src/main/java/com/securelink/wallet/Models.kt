@@ -4,6 +4,7 @@ data class Contact(
     val id: Long,
     val name: String,
     val deviceId: String,
+    val trustLevel: String = "Verified device",
 )
 
 data class ChatMessage(
@@ -35,5 +36,17 @@ data class AppState(
     val messages: List<ChatMessage> = emptyList(),
     val documents: List<WalletDocument> = emptyList(),
     val credentials: List<CredentialEntry> = emptyList(),
-    val p2pStatus: String = "Manual QR offer/answer ready",
+    val p2pStatus: String = "Ready to create a private call invite",
+    val localCallPayload: String? = null,
+    val callStage: CallStage = CallStage.Idle,
+    val mediaPermissionGranted: Boolean = false,
 )
+
+enum class CallStage {
+    Idle,
+    Gathering,
+    WaitingForPeer,
+    Connecting,
+    InCall,
+    Failed,
+}

@@ -56,6 +56,13 @@ class SecureLinkDatabase(context: Context) : SQLiteOpenHelper(context, "secureli
         })
     }
 
+    fun addContact(name: String, deviceId: String) {
+        writableDatabase.insert("contacts", null, ContentValues().apply {
+            put("name", name)
+            put("device_id", deviceId)
+        })
+    }
+
     fun addCredential(label: String, username: String, password: String, url: String) {
         writableDatabase.insert("credentials", null, ContentValues().apply {
             put("label", label)
@@ -78,9 +85,19 @@ class SecureLinkDatabase(context: Context) : SQLiteOpenHelper(context, "secureli
             put("name", "Asha")
             put("device_id", "peer-asha-demo")
         })
+        db.insert("contacts", null, ContentValues().apply {
+            put("name", "Rohan")
+            put("device_id", "peer-rohan-demo")
+        })
         db.insert("messages", null, ContentValues().apply {
             put("contact_id", 1)
             put("text", "Secure local-first chat is ready.")
+            put("sent_by_me", 0)
+            put("timestamp_ms", System.currentTimeMillis())
+        })
+        db.insert("messages", null, ContentValues().apply {
+            put("contact_id", 2)
+            put("text", "Tap Calls to create a private room.")
             put("sent_by_me", 0)
             put("timestamp_ms", System.currentTimeMillis())
         })

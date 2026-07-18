@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import com.securelink.wallet.data.SecureLinkDatabase
 import com.securelink.wallet.p2p.ManualSignaling
+import com.securelink.wallet.p2p.WebRtcCallManager
 import com.securelink.wallet.security.PasswordGenerator
 import com.securelink.wallet.security.VaultCrypto
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,11 +16,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val passwordGenerator = PasswordGenerator()
     private val vaultCrypto = VaultCrypto()
     private val signaling = ManualSignaling()
+    val callManager = WebRtcCallManager(application.applicationContext, signaling, object : WebRtcCallManager.Listener {
+        override fun onStatus(stage: WebRtcCallManager.Stage, message: String) {
+            _state.value = _state.value.copy(callStage = stage.toAppStage(), p2pStatus = message)
+        }
+
+        override fun onLocalSignal(payload: String) {
+            _state.value = _state.value.copy(localCallPayload = payload)
+        }
+
+        override fun onTracksChanged(local: org.webrtc.VideoTrack?, remote: org.webrtc.VideoTrack?) = Unit
+    })
     private val _state = MutableStateFlow(loadState())
     val state: StateFlow<AppState> = _state
 
     fun selectContact(contactId: Long) {
         _state.value = loadState(contactId)
+    }
+
+    fun addContact(name: String) {
+        val cleaned = name.trim()
+        if (cleaned.isBlank()) return
+        database.addContact(cleaned, "peer-${cleaned.lowercase().replace(" ", "-")}-${System.currentTimeMillis()}")
+        _state.value = loadState(_state.value.selectedContactId)
     }
 
     fun sendMessage(text: String) {
@@ -50,9 +69,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = loadState(_state.value.selectedContactId)
     }
 
-    fun refreshInvite() {
-        val invite = signaling.createInvite("SecureLink Android")
-        _state.value = _state.value.copy(p2pStatus = "Share invite: ${invite.publicCode}")
+    fun updateMediaPermission(granted: Boolean) {
+        _state.value = _state.value.copy(mediaPermissionGranted = granted)
+    }
+
+    fun createCallInvite() {
+        _state.value = _state.value.copy(localCallPayload = null, callStage = CallStage.Gathering)
+        callManager.createOffer()
+    }
+
+    fun applyCallSignal(payload: String) {
+        if (payload.isBlank()) return
+        _state.value = _state.value.copy(localCallPayload = null, callStage = CallStage.Connecting)
+        callManager.applySignal(payload)
+    }
+
+    fun endCall() {
+        _state.value = _state.value.copy(
+            localCallPayload = null,
+            callStage = CallStage.Idle,
+            p2pStatus = "Ready to create a private call invite",
+        )
+        callManager.close()
     }
 
     private fun loadState(selectedContactId: Long? = null): AppState {
@@ -73,5 +111,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val payload = Base64.getDecoder().decode(value.removePrefix("vault:"))
             vaultCrypto.decrypt(payload)
         }.getOrElse { "Unable to decrypt on this device" }
+    }
+
+    override fun onCleared() {
+        callManager.dispose()
+        super.onCleared()
+    }
+
+    private fun WebRtcCallManager.Stage.toAppStage(): CallStage = when (this) {
+        WebRtcCallManager.Stage.GATHERING -> CallStage.Gathering
+        WebRtcCallManager.Stage.WAITING_FOR_PEER -> CallStage.WaitingForPeer
+        WebRtcCallManager.Stage.CONNECTING -> CallStage.Connecting
+        WebRtcCallManager.Stage.IN_CALL -> CallStage.InCall
+        WebRtcCallManager.Stage.FAILED -> CallStage.Failed
     }
 }

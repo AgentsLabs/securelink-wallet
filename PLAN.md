@@ -9,10 +9,16 @@
 - [x] Encrypt newly generated credential passwords before database storage.
 - [x] Add password generator and manual P2P invite logic.
 - [x] Add unit tests for password generation and invite parsing.
-- [ ] Wire real WebRTC audio/video media streams.
+- [x] Beautify the Compose app shell with richer chat, contacts, wallet, password, and call screens.
+- [x] Add contact selection and trusted-contact creation flow.
+- [x] Add camera/microphone manifest and runtime permission flow.
+- [x] Add manual no-account WebRTC offer/answer signaling between two Android installs.
+- [x] Wire real WebRTC audio/video media streams, ICE candidates, and local/remote video rendering.
+- [ ] Add project-operated TURN credentials for reliable calling behind restrictive NATs.
 - [ ] Encrypt all persisted sensitive fields or migrate to SQLCipher/Room.
 - [ ] Add biometric/PIN vault unlock before showing secrets.
 - [ ] Add real document picker import and encrypted file storage.
+- [ ] Push production-ready code to GitHub.
 - [ ] Record public YouTube demo under 3 minutes.
 - [ ] Submit to OpenAI Build Week on Devpost.
 
@@ -20,8 +26,8 @@
 
 The hackathon MVP demonstrates the product direction with a buildable Android app:
 
-- WhatsApp-like local chat screen.
-- Serverless manual peer invite flow for P2P setup.
+- WhatsApp-like local chat screen with trusted contact selection.
+- Direct WebRTC call setup with camera/microphone permission handling and manually exchanged invite/answer payloads.
 - Personal document wallet list with local persistence.
 - Credential manager with generated strong passwords.
 - Clear README instructions and Devpost demo script.
@@ -31,7 +37,7 @@ The hackathon MVP demonstrates the product direction with a buildable Android ap
 - UI: Kotlin + Jetpack Compose + Material 3.
 - Local database: Android `SQLiteOpenHelper`, stored on device.
 - Security: Android Keystore AES-GCM helper for vault payload encryption.
-- P2P: manual QR/text offer-answer architecture placeholder; WebRTC implementation is the next milestone.
+- P2P: native WebRTC audio/video with direct manual signaling and public STUN route discovery. Production reliability requires project-operated TURN.
 
 ## Devpost Checklist
 
