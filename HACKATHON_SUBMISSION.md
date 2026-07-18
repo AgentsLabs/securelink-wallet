@@ -43,7 +43,7 @@ Codex was used to plan the MVP, implement the Compose interface and encrypted st
 
 ## Submission Links
 
-- Repository: `REPLACE_WITH_GITHUB_REPOSITORY_URL`
+- Repository: https://github.com/AgentsLabs/securelink-wallet
 - Demo video: `REPLACE_WITH_PUBLIC_YOUTUBE_URL`
 - Devpost submission: `REPLACE_WITH_DEVPOST_URL`
 
