@@ -5,5 +5,7 @@ artifacts/
 build/
 app/build/
 local.properties
+.keys/
+keystore.properties
 *.iml
 .idea/
