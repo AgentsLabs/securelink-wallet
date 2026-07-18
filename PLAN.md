@@ -15,6 +15,7 @@
 - [x] Add manual no-account WebRTC offer/answer signaling between two Android installs.
 - [x] Wire real WebRTC audio/video media streams, ICE candidates, and local/remote video rendering.
 - [x] Verify a full offer/answer handshake and live encrypted media state across two Android emulators.
+- [x] Enable R8/resource shrinking with WebRTC retention rules and verify the release assembly.
 - [ ] Add project-operated TURN credentials for reliable calling behind restrictive NATs.
 - [x] Encrypt persisted contact, message, document, and credential fields with Android Keystore AES-GCM.
 - [x] Add biometric/device-credential vault unlock before showing credentials.
