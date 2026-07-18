@@ -22,7 +22,8 @@
 - [ ] Add real document picker import and encrypted file storage.
 - [x] Push the code to the public GitHub repository.
 - [x] Prepare ready-to-paste hackathon submission copy and demo flow.
-- [ ] Record public YouTube demo under 3 minutes.
+- [x] Prepare a 72-second narrated demo MP4 and upload metadata.
+- [ ] Upload the demo video publicly to YouTube.
 - [ ] Submit to OpenAI Build Week on Devpost.
 
 ## MVP Scope

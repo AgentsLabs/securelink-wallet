@@ -1,5 +1,6 @@
 .env
 *.hprof
+artifacts/
 .gradle/
 build/
 app/build/
