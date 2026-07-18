@@ -15,7 +15,7 @@
 - [x] Add manual no-account WebRTC offer/answer signaling between two Android installs.
 - [x] Wire real WebRTC audio/video media streams, ICE candidates, and local/remote video rendering.
 - [ ] Add project-operated TURN credentials for reliable calling behind restrictive NATs.
-- [ ] Encrypt all persisted sensitive fields or migrate to SQLCipher/Room.
+- [x] Encrypt persisted contact, message, document, and credential fields with Android Keystore AES-GCM.
 - [x] Add biometric/device-credential vault unlock before showing credentials.
 - [ ] Add real document picker import and encrypted file storage.
 - [ ] Push production-ready code to GitHub.
@@ -35,8 +35,8 @@ The hackathon MVP demonstrates the product direction with a buildable Android ap
 ## Architecture
 
 - UI: Kotlin + Jetpack Compose + Material 3.
-- Local database: Android `SQLiteOpenHelper`, stored on device.
-- Security: Android Keystore AES-GCM helper for vault payload encryption.
+- Local database: Android `SQLiteOpenHelper` with field-level AES-GCM values, stored on device.
+- Security: Android Keystore AES-GCM helper and biometric/device-credential vault gate.
 - P2P: native WebRTC audio/video with direct manual signaling and public STUN route discovery. Production reliability requires project-operated TURN.
 
 ## Devpost Checklist

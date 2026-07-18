@@ -5,8 +5,8 @@ SecureLink Wallet is a local-first Android MVP for OpenAI Build Week. It combine
 ## Features
 
 - Polished Jetpack Compose shell for contacts, chat, calling, wallet, and passwords.
-- Local SQLite-backed contact list, chat, document wallet, and credential records.
-- Android Keystore encryption for generated credential payloads plus biometric/device-credential vault access.
+- Local SQLite-backed contact list, chat, document wallet, and credential records with AES-GCM encrypted fields.
+- Android Keystore-backed encryption plus biometric/device-credential vault access for credentials.
 - Password generator with unit tests.
 - Runtime camera and microphone permission flow for audio/video calling.
 - Native WebRTC audio/video tracks with local and remote video rendering.
@@ -56,7 +56,7 @@ Codex/GPT-5.6 collaboration: Codex was used to plan the MVP, scaffold the Androi
 
 **Solution:** SecureLink Wallet combines trusted contacts, private chat, direct WebRTC audio/video calling, a personal document wallet, and generated credentials in one Android app designed around on-device storage.
 
-**What is working now:** The Android build runs on emulator, includes contact selection, local chat persistence, Android Keystore-backed generated credentials gated by biometrics or device credentials, and direct WebRTC audio/video calling. Two installs exchange compact offer/answer payloads manually; the app then captures camera/microphone media, negotiates ICE candidates, and renders local or remote video.
+**What is working now:** The Android build runs on emulator, includes contact selection, AES-GCM encrypted local records, Android Keystore-backed generated credentials gated by biometrics or device credentials, and direct WebRTC audio/video calling. Two installs exchange compact offer/answer payloads manually; the app then captures camera/microphone media, negotiates ICE candidates, and renders local or remote video.
 
 **Next hardening steps:** Add a project-operated TURN service for restrictive NATs, encrypt all persisted sensitive fields, add document import, and prepare a signed release build.
 
