@@ -20,7 +20,7 @@
 - [x] Encrypt persisted contact, message, document, and credential fields with Android Keystore AES-GCM.
 - [x] Add biometric/device-credential vault unlock before showing credentials.
 - [ ] Add real document picker import and encrypted file storage.
-- [ ] Push production-ready code to GitHub.
+- [x] Push the code to the public GitHub repository.
 - [x] Prepare ready-to-paste hackathon submission copy and demo flow.
 - [ ] Record public YouTube demo under 3 minutes.
 - [ ] Submit to OpenAI Build Week on Devpost.
