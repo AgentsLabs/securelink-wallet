@@ -50,6 +50,7 @@ class WebRtcCallManager(
     private var videoSource: VideoSource? = null
     private var audioSource: AudioSource? = null
     private var pendingSignalType: CallSignal.Type? = null
+    private var awaitingAnswer = false
     private val gatheredCandidates = mutableListOf<IceCandidatePayload>()
 
     init {
@@ -100,7 +101,7 @@ class WebRtcCallManager(
         if (!prepareConnection()) return
         pendingSignalType = CallSignal.Type.ANSWER
         listener.onStatus(Stage.GATHERING, "Creating an answer for the incoming invite.")
-        peerConnection?.setRemoteDescription(descriptionObserver {
+        peerConnection?.setRemoteDescription(setDescriptionObserver {
             addRemoteCandidates(signal)
             peerConnection?.createAnswer(descriptionObserver { answer ->
                 peerConnection?.setLocalDescription(noOpObserver(), answer)
@@ -110,13 +111,13 @@ class WebRtcCallManager(
 
     private fun acceptAnswer(signal: CallSignal) {
         val connection = peerConnection
-        if (connection == null || pendingSignalType != CallSignal.Type.OFFER) {
+        if (connection == null || !awaitingAnswer) {
             listener.onStatus(Stage.FAILED, "Create an invite before applying an answer.")
             return
         }
-        pendingSignalType = null
+        awaitingAnswer = false
         listener.onStatus(Stage.CONNECTING, "Answer received. Connecting encrypted media…")
-        connection.setRemoteDescription(descriptionObserver {
+        connection.setRemoteDescription(setDescriptionObserver {
             addRemoteCandidates(signal)
         }, SessionDescription(SessionDescription.Type.ANSWER, signal.sdp))
     }
@@ -193,6 +194,7 @@ class WebRtcCallManager(
         val type = pendingSignalType ?: return
         val sdp = connection.localDescription?.description ?: return
         pendingSignalType = null
+        awaitingAnswer = type == CallSignal.Type.OFFER
         listener.onLocalSignal(signaling.encodeCallSignal(CallSignal(type, sdp, gatheredCandidates.toList())))
         listener.onStatus(Stage.WAITING_FOR_PEER, if (type == CallSignal.Type.OFFER) "Invite ready. Send it to the other SecureLink device, then paste its answer here." else "Answer ready. Send it back to the caller to complete the connection.")
     }
@@ -226,6 +228,7 @@ class WebRtcCallManager(
         videoSource = null
         audioSource = null
         pendingSignalType = null
+        awaitingAnswer = false
         gatheredCandidates.clear()
         listener.onTracksChanged(null, null)
     }
@@ -233,6 +236,13 @@ class WebRtcCallManager(
     private fun descriptionObserver(onSuccess: (SessionDescription) -> Unit): SdpObserver = object : SdpObserver {
         override fun onCreateSuccess(description: SessionDescription) = onSuccess(description)
         override fun onSetSuccess() = Unit
+        override fun onCreateFailure(error: String) = listener.onStatus(Stage.FAILED, error)
+        override fun onSetFailure(error: String) = listener.onStatus(Stage.FAILED, error)
+    }
+
+    private fun setDescriptionObserver(onSuccess: () -> Unit): SdpObserver = object : SdpObserver {
+        override fun onCreateSuccess(description: SessionDescription) = Unit
+        override fun onSetSuccess() = onSuccess()
         override fun onCreateFailure(error: String) = listener.onStatus(Stage.FAILED, error)
         override fun onSetFailure(error: String) = listener.onStatus(Stage.FAILED, error)
     }
