@@ -16,7 +16,7 @@
 - [x] Wire real WebRTC audio/video media streams, ICE candidates, and local/remote video rendering.
 - [ ] Add project-operated TURN credentials for reliable calling behind restrictive NATs.
 - [ ] Encrypt all persisted sensitive fields or migrate to SQLCipher/Room.
-- [ ] Add biometric/PIN vault unlock before showing secrets.
+- [x] Add biometric/device-credential vault unlock before showing credentials.
 - [ ] Add real document picker import and encrypted file storage.
 - [ ] Push production-ready code to GitHub.
 - [ ] Record public YouTube demo under 3 minutes.

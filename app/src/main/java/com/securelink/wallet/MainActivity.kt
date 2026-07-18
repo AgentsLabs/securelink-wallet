@@ -5,11 +5,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -58,27 +57,62 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.ViewModelProvider
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
 
-class MainActivity : ComponentActivity() {
-    private val viewModel: AppViewModel by viewModels()
+class MainActivity : FragmentActivity() {
+    private val viewModel by lazy { ViewModelProvider(this)[AppViewModel::class.java] }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            SecureLinkApp(viewModel)
+        setContentView(ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { SecureLinkApp(viewModel, ::authenticateVault) }
+        })
+    }
+
+    override fun onStop() {
+        viewModel.lockVault()
+        super.onStop()
+    }
+
+    private fun authenticateVault() {
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val manager = BiometricManager.from(this)
+        if (manager.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            viewModel.reportVaultAuthenticationUnavailable()
+            return
         }
+        BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    viewModel.unlockVault()
+                }
+            },
+        ).authenticate(
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Unlock credential vault")
+                .setSubtitle("Confirm your identity to view saved passwords")
+                .setAllowedAuthenticators(authenticators)
+                .build(),
+        )
     }
 }
 
 @Composable
-fun SecureLinkApp(viewModel: AppViewModel) {
+fun SecureLinkApp(viewModel: AppViewModel, onUnlockVault: () -> Unit) {
     val state by viewModel.state.collectAsState()
     var tab by remember { mutableStateOf(Tab.Chats) }
     val context = LocalContext.current
@@ -139,7 +173,14 @@ fun SecureLinkApp(viewModel: AppViewModel) {
                             eglContext = viewModel.callManager.eglContext,
                         )
                         Tab.Wallet -> WalletScreen(state.documents, viewModel::addDemoDocument)
-                        Tab.Passwords -> PasswordsScreen(state.credentials, viewModel::addGeneratedCredential)
+                        Tab.Passwords -> PasswordsScreen(
+                            credentials = state.credentials,
+                            unlocked = state.vaultUnlocked,
+                            vaultMessage = state.vaultMessage,
+                            onUnlock = onUnlockVault,
+                            onLock = viewModel::lockVault,
+                            onGenerate = viewModel::addGeneratedCredential,
+                        )
                     }
                 }
             }
@@ -477,10 +518,27 @@ private fun ColumnScope.WalletScreen(documents: List<WalletDocument>, onAddDocum
 }
 
 @Composable
-private fun ColumnScope.PasswordsScreen(credentials: List<CredentialEntry>, onGenerate: () -> Unit) {
-    SectionTitle("Credential manager", "Generated secrets are encrypted with Android Keystore")
-    Button(onClick = onGenerate, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-        Text("Generate saved credential")
+private fun ColumnScope.PasswordsScreen(
+    credentials: List<CredentialEntry>,
+    unlocked: Boolean,
+    vaultMessage: String?,
+    onUnlock: () -> Unit,
+    onLock: () -> Unit,
+    onGenerate: () -> Unit,
+) {
+    SectionTitle("Credential manager", if (unlocked) "Vault unlocked for this session" else "Unlock with biometrics or device credential")
+    if (unlocked) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onGenerate, shape = RoundedCornerShape(8.dp), modifier = Modifier.weight(1f)) {
+                Text("Generate saved credential")
+            }
+            OutlinedButton(onClick = onLock, shape = RoundedCornerShape(8.dp)) { Text("Lock") }
+        }
+    } else {
+        Button(onClick = onUnlock, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Text("Unlock credential vault")
+        }
+        vaultMessage?.let { Text(it, color = Color(0xFFB45309), style = MaterialTheme.typography.bodyMedium) }
     }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
         items(credentials) { item ->

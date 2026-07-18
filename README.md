@@ -6,7 +6,7 @@ SecureLink Wallet is a local-first Android MVP for OpenAI Build Week. It combine
 
 - Polished Jetpack Compose shell for contacts, chat, calling, wallet, and passwords.
 - Local SQLite-backed contact list, chat, document wallet, and credential records.
-- Android Keystore encryption helper for generated credential payloads.
+- Android Keystore encryption for generated credential payloads plus biometric/device-credential vault access.
 - Password generator with unit tests.
 - Runtime camera and microphone permission flow for audio/video calling.
 - Native WebRTC audio/video tracks with local and remote video rendering.
@@ -38,13 +38,13 @@ Target category: Apps for your life.
 
 Demo script:
 
-1. Show trusted contacts, select a peer, and send a local encrypted-chat demo message.
+1. Show trusted contacts, select a peer, and send a local chat demo message.
 2. On phone A, open Calls, grant camera/microphone permissions, tap **Create invite**, then copy and send the signal through a trusted channel.
 3. On phone B, paste the invite, tap **Apply signal**, then copy its generated answer back to phone A.
 4. On phone A, paste and apply that answer to establish the encrypted WebRTC media connection.
-5. Add a document wallet item.
-6. Generate a credential.
-7. Explain that data stays on device and call signaling is exchanged directly between the two app installs, without an account or a signaling backend.
+5. Open Passwords, unlock the credential vault with biometrics or device credential, then generate a credential.
+6. Add a document wallet item.
+7. Explain that call signaling is exchanged directly between the two app installs, without an account or a signaling backend.
 
 Codex/GPT-5.6 collaboration: Codex was used to plan the MVP, scaffold the Android project, implement the UI/data/security/calling slices, verify on emulator, and maintain `PLAN.md`.
 
@@ -56,9 +56,9 @@ Codex/GPT-5.6 collaboration: Codex was used to plan the MVP, scaffold the Androi
 
 **Solution:** SecureLink Wallet combines trusted contacts, private chat, direct WebRTC audio/video calling, a personal document wallet, and generated credentials in one Android app designed around on-device storage.
 
-**What is working now:** The Android build runs on emulator, includes contact selection, local chat persistence, Android Keystore-backed generated credentials, and direct WebRTC audio/video calling. Two installs exchange compact offer/answer payloads manually; the app then captures camera/microphone media, negotiates ICE candidates, and renders local or remote video.
+**What is working now:** The Android build runs on emulator, includes contact selection, local chat persistence, Android Keystore-backed generated credentials gated by biometrics or device credentials, and direct WebRTC audio/video calling. Two installs exchange compact offer/answer payloads manually; the app then captures camera/microphone media, negotiates ICE candidates, and renders local or remote video.
 
-**Next hardening steps:** Add a project-operated TURN service for restrictive NATs, add biometric vault unlock, encrypt all persisted sensitive fields, add document import, and prepare a signed release build.
+**Next hardening steps:** Add a project-operated TURN service for restrictive NATs, encrypt all persisted sensitive fields, add document import, and prepare a signed release build.
 
 ## Calling Notes
 

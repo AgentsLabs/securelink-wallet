@@ -9,7 +9,7 @@ import com.securelink.wallet.Contact
 import com.securelink.wallet.CredentialEntry
 import com.securelink.wallet.WalletDocument
 
-class SecureLinkDatabase(context: Context) : SQLiteOpenHelper(context, "securelink_wallet.db", null, 1) {
+class SecureLinkDatabase(context: Context) : SQLiteOpenHelper(context, "securelink_wallet.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE contacts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, device_id TEXT NOT NULL)")
         db.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, text TEXT NOT NULL, sent_by_me INTEGER NOT NULL, timestamp_ms INTEGER NOT NULL)")
@@ -18,7 +18,11 @@ class SecureLinkDatabase(context: Context) : SQLiteOpenHelper(context, "secureli
         seed(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            db.delete("credentials", "password NOT LIKE ?", arrayOf("vault:%"))
+        }
+    }
 
     fun contacts(): List<Contact> = readableDatabase.rawQuery("SELECT id, name, device_id FROM contacts ORDER BY name", null).use { c ->
         buildList {
@@ -97,7 +101,7 @@ class SecureLinkDatabase(context: Context) : SQLiteOpenHelper(context, "secureli
         })
         db.insert("messages", null, ContentValues().apply {
             put("contact_id", 2)
-            put("text", "Tap Calls to create a private room.")
+            put("text", "Tap Calls to create a direct call invite.")
             put("sent_by_me", 0)
             put("timestamp_ms", System.currentTimeMillis())
         })
@@ -105,12 +109,6 @@ class SecureLinkDatabase(context: Context) : SQLiteOpenHelper(context, "secureli
             put("title", "Passport")
             put("kind", "Identity")
             put("note", "Stored locally; encrypted file import is next.")
-        })
-        db.insert("credentials", null, ContentValues().apply {
-            put("label", "Devpost")
-            put("username", "builder@example.com")
-            put("password", "Tap to replace with generated password")
-            put("url", "https://devpost.com")
         })
     }
 }

@@ -31,21 +31,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val state: StateFlow<AppState> = _state
 
     fun selectContact(contactId: Long) {
-        _state.value = loadState(contactId)
+        _state.value = loadState(contactId, _state.value.vaultUnlocked)
     }
 
     fun addContact(name: String) {
         val cleaned = name.trim()
         if (cleaned.isBlank()) return
         database.addContact(cleaned, "peer-${cleaned.lowercase().replace(" ", "-")}-${System.currentTimeMillis()}")
-        _state.value = loadState(_state.value.selectedContactId)
+        _state.value = loadState(_state.value.selectedContactId, _state.value.vaultUnlocked)
     }
 
     fun sendMessage(text: String) {
         val contactId = _state.value.selectedContactId ?: _state.value.contacts.firstOrNull()?.id ?: return
         if (text.isBlank()) return
         database.addMessage(contactId, text.trim(), true)
-        _state.value = loadState(contactId)
+        _state.value = loadState(contactId, _state.value.vaultUnlocked)
     }
 
     fun addGeneratedCredential() {
@@ -57,7 +57,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             password = encryptedPassword,
             url = "https://example.com",
         )
-        _state.value = loadState(_state.value.selectedContactId)
+        _state.value = loadState(_state.value.selectedContactId, _state.value.vaultUnlocked)
     }
 
     fun addDemoDocument() {
@@ -66,11 +66,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             kind = "Health",
             note = "Demo wallet item stored in the local database.",
         )
-        _state.value = loadState(_state.value.selectedContactId)
+        _state.value = loadState(_state.value.selectedContactId, _state.value.vaultUnlocked)
     }
 
     fun updateMediaPermission(granted: Boolean) {
         _state.value = _state.value.copy(mediaPermissionGranted = granted)
+    }
+
+    fun unlockVault() {
+        _state.value = _state.value.copy(
+            credentials = database.credentials().map { it.copy(password = displayPassword(it.password)) },
+            vaultUnlocked = true,
+            vaultMessage = null,
+        )
+    }
+
+    fun lockVault() {
+        _state.value = _state.value.copy(
+            credentials = database.credentials().map { it.copy(password = maskedPassword(it.password)) },
+            vaultUnlocked = false,
+        )
+    }
+
+    fun reportVaultAuthenticationUnavailable() {
+        _state.value = _state.value.copy(
+            vaultMessage = "Set a secure screen lock or enroll a strong biometric to unlock saved credentials.",
+        )
     }
 
     fun createCallInvite() {
@@ -93,7 +114,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         callManager.close()
     }
 
-    private fun loadState(selectedContactId: Long? = null): AppState {
+    private fun loadState(selectedContactId: Long? = null, vaultUnlocked: Boolean = false): AppState {
         val contacts = database.contacts()
         val activeContact = selectedContactId ?: contacts.firstOrNull()?.id
         return AppState(
@@ -101,7 +122,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             selectedContactId = activeContact,
             messages = activeContact?.let { database.messages(it) }.orEmpty(),
             documents = database.documents(),
-            credentials = database.credentials().map { it.copy(password = displayPassword(it.password)) },
+            credentials = database.credentials().map { credential ->
+                credential.copy(password = if (vaultUnlocked) displayPassword(credential.password) else maskedPassword(credential.password))
+            },
+            vaultUnlocked = vaultUnlocked,
         )
     }
 
@@ -112,6 +136,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             vaultCrypto.decrypt(payload)
         }.getOrElse { "Unable to decrypt on this device" }
     }
+
+    private fun maskedPassword(value: String): String = if (value.isBlank()) "" else "********"
 
     override fun onCleared() {
         callManager.dispose()

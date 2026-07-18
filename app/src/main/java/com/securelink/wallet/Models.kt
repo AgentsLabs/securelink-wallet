@@ -40,6 +40,8 @@ data class AppState(
     val localCallPayload: String? = null,
     val callStage: CallStage = CallStage.Idle,
     val mediaPermissionGranted: Boolean = false,
+    val vaultUnlocked: Boolean = false,
+    val vaultMessage: String? = null,
 )
 
 enum class CallStage {
