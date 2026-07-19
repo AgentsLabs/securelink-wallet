@@ -168,7 +168,11 @@ fun SecureLinkApp(viewModel: AppViewModel, onUnlockVault: () -> Unit) {
                             onRequestPermissions = { permissionLauncher.launch(mediaPermissions) },
                             onCreateInvite = viewModel::createCallInvite,
                             onApplySignal = viewModel::applyCallSignal,
+                            onApplyQueuedSignal = viewModel::applyQueuedCallSignal,
                             onEndCall = viewModel::endCall,
+                            onSetRelayUrl = viewModel::setRelayUrl,
+                            onDeliverRelay = viewModel::deliverLocalSignal,
+                            onFetchRelay = viewModel::fetchRelaySignals,
                             localTrack = viewModel.callManager.localVideoTrack,
                             remoteTrack = viewModel.callManager.remoteVideoTrack,
                             eglContext = viewModel.callManager.eglContext,
@@ -245,12 +249,14 @@ private fun CallStage.label(): String = when (this) {
 private fun ColumnScope.ChatsScreen(
     state: AppState,
     onSelectContact: (Long) -> Unit,
-    onAddContact: (String) -> Unit,
+    onAddContact: (String, String) -> Unit,
     onSend: (String) -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
     var newContact by remember { mutableStateOf("") }
+    var pairingCode by remember { mutableStateOf("") }
     val selected = state.contacts.firstOrNull { it.id == state.selectedContactId } ?: state.contacts.firstOrNull()
+    val context = LocalContext.current
 
     SectionTitle("Contacts", "Choose who this device is linked to")
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -258,24 +264,42 @@ private fun ColumnScope.ChatsScreen(
             ContactChip(contact, selected = contact.id == selected?.id, onClick = { onSelectContact(contact.id) })
         }
     }
+    OutlinedTextField(
+        value = newContact,
+        onValueChange = { newContact = it },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Contact name") },
+        singleLine = true,
+    )
+    OutlinedTextField(
+        value = pairingCode,
+        onValueChange = { pairingCode = it },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Paste their pairing code") },
+        singleLine = true,
+    )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = newContact,
-            onValueChange = { newContact = it },
+        OutlinedButton(
+            onClick = {
+                context.getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText("SecureLink pairing code", state.localPairingCode))
+            },
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Add trusted contact") },
-            singleLine = true,
-        )
+            shape = RoundedCornerShape(8.dp),
+        ) { Text("Copy my code") }
         Button(
             onClick = {
-                onAddContact(newContact)
-                newContact = ""
+                onAddContact(newContact, pairingCode)
+                pairingCode = ""
             },
+            modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(8.dp),
-        ) { Text("Add") }
+        ) { Text("Pair contact") }
     }
-
-    SectionTitle("Encrypted chat", selected?.deviceId ?: "No peer selected")
+    state.contactNotice?.let { notice ->
+        Text(notice, style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B6477))
+    }
+    SectionTitle("Encrypted chat", selected?.let { "Paired device • ${it.identityFingerprint}" } ?: "No peer selected")
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.weight(1f),
@@ -319,6 +343,7 @@ private fun ContactChip(contact: Contact, selected: Boolean, onClick: () -> Unit
             Column {
                 Text(contact.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(contact.trustLevel, style = MaterialTheme.typography.labelSmall, color = Color(0xFF6B6477), maxLines = 1)
+                Text("ID ${contact.identityFingerprint}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF8A8294), maxLines = 1)
             }
         }
     }
@@ -350,11 +375,25 @@ private fun MessageBubble(message: ChatMessage) {
             ),
             modifier = Modifier.fillMaxWidth(0.82f),
         ) {
-            Text(
-                text = if (message.sentByMe) message.text else "Peer: ${message.text}",
-                modifier = Modifier.padding(12.dp),
-                color = if (message.sentByMe) Color.White else MaterialTheme.colorScheme.onSurface,
-            )
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (message.type == MessageType.CALL_SIGNAL) {
+                    Text(
+                        text = if (message.sentByMe) "Secure call signal created" else "Incoming secure call signal",
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (message.sentByMe) Color.White else MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Open Calls to copy or apply this short-lived, contact-bound signal.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (message.sentByMe) Color.White.copy(alpha = 0.82f) else Color(0xFF6B6477),
+                    )
+                } else {
+                    Text(
+                        text = if (message.sentByMe) message.text else "Peer: ${message.text}",
+                        color = if (message.sentByMe) Color.White else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
         }
     }
 }
@@ -365,12 +404,17 @@ private fun CallsScreen(
     onRequestPermissions: () -> Unit,
     onCreateInvite: () -> Unit,
     onApplySignal: (String) -> Unit,
+    onApplyQueuedSignal: (String) -> Unit,
     onEndCall: () -> Unit,
+    onSetRelayUrl: (String) -> Unit,
+    onDeliverRelay: () -> Unit,
+    onFetchRelay: () -> Unit,
     localTrack: VideoTrack?,
     remoteTrack: VideoTrack?,
     eglContext: org.webrtc.EglBase.Context,
 ) {
     var signalDraft by remember { mutableStateOf("") }
+    var relayUrlDraft by remember(state.relayUrl) { mutableStateOf(state.relayUrl) }
     val selected = state.contacts.firstOrNull { it.id == state.selectedContactId } ?: state.contacts.firstOrNull()
     val context = LocalContext.current
 
@@ -384,10 +428,35 @@ private fun CallsScreen(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CallPreview(state, localTrack, remoteTrack, eglContext)
             Text(state.p2pStatus, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4C3D5E))
+            Text(
+                "Signals are bound to ${selected?.name ?: "the selected contact"} and expire after five minutes.",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF6B6477),
+            )
             if (!state.mediaPermissionGranted) {
                 OutlinedButton(onClick = onRequestPermissions, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
                     Text("Allow camera and microphone")
                 }
+            }
+            OutlinedTextField(
+                value = relayUrlDraft,
+                onValueChange = { relayUrlDraft = it },
+                placeholder = { Text("Optional HTTPS signaling relay URL") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { onSetRelayUrl(relayUrlDraft) },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f),
+                ) { Text("Save relay") }
+                OutlinedButton(
+                    onClick = onFetchRelay,
+                    enabled = state.relayUrl.isNotBlank(),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f),
+                ) { Text("Fetch relay") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(
@@ -405,6 +474,12 @@ private fun CallsScreen(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f),
                     ) { Text("Copy signal") }
+                    OutlinedButton(
+                        onClick = onDeliverRelay,
+                        enabled = state.relayUrl.isNotBlank(),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Send relay") }
                 }
             }
             HorizontalDivider()
@@ -428,6 +503,25 @@ private fun CallsScreen(
                 ) { Text("Apply signal") }
                 TextButton(onClick = onEndCall, modifier = Modifier.weight(1f)) {
                     Text("End session")
+                }
+            }
+            state.messages.filter { it.type == MessageType.CALL_SIGNAL && !it.sentByMe }.takeLast(3).forEach { message ->
+                OutlinedButton(
+                    onClick = { onApplyQueuedSignal(message.text) },
+                    enabled = state.mediaPermissionGranted,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Apply received signal") }
+            }
+            if (state.callHistory.isNotEmpty()) {
+                HorizontalDivider()
+                Text("Call history", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                state.callHistory.take(3).forEach { entry ->
+                    Text(
+                        "${entry.direction} call • ${entry.outcome}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B6477),
+                    )
                 }
             }
         }

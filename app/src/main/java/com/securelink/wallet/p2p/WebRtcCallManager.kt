@@ -23,10 +23,34 @@ import org.webrtc.VideoSource
 import org.webrtc.VideoTrack
 import org.webrtc.audio.JavaAudioDeviceModule
 
+/**
+ * Keep TURN credentials out of the APK. A production signaling service should
+ * mint short-lived credentials and supply this configuration when a call starts.
+ */
+data class IceServerConfig(
+    val stunUrls: List<String> = listOf("stun:stun.l.google.com:19302"),
+    val turnUrls: List<String> = emptyList(),
+    val turnUsername: String? = null,
+    val turnCredential: String? = null,
+) {
+    fun toIceServers(): List<PeerConnection.IceServer> = buildList {
+        stunUrls.forEach { add(PeerConnection.IceServer.builder(it).createIceServer()) }
+        if (turnUrls.isNotEmpty() && !turnUsername.isNullOrBlank() && !turnCredential.isNullOrBlank()) {
+            add(
+                PeerConnection.IceServer.builder(turnUrls)
+                    .setUsername(turnUsername)
+                    .setPassword(turnCredential)
+                    .createIceServer(),
+            )
+        }
+    }
+}
+
 class WebRtcCallManager(
     private val context: Context,
     private val signaling: ManualSignaling,
     private val listener: Listener,
+    private val iceServerConfig: IceServerConfig = IceServerConfig(),
 ) {
     interface Listener {
         fun onStatus(stage: Stage, message: String)
@@ -125,7 +149,7 @@ class WebRtcCallManager(
     private fun prepareConnection(): Boolean = runCatching {
         val connection = factory.createPeerConnection(
             PeerConnection.RTCConfiguration(
-                listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()),
+                iceServerConfig.toIceServers(),
             ),
             object : PeerConnection.Observer {
                 override fun onSignalingChange(newState: PeerConnection.SignalingState) = Unit
